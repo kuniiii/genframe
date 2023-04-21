@@ -10,7 +10,7 @@ class FullScreenApp:
     def __init__(self, image, master=None):
         self.master = master
         self.master.attributes("-fullscreen", True)
-        self.master.bind("<Escape>", self.close)
+        self.master.bind("<Key>", self.close)
 
         self.canvas = Canvas(self.master, width=self.master.winfo_screenwidth(), height=self.master.winfo_screenheight(), bg="black")
         self.canvas.pack(fill="both", expand=True)
@@ -21,6 +21,14 @@ class FullScreenApp:
         self.image = ImageTk.PhotoImage(image)
         self.image_label = self.canvas.create_image(self.master.winfo_screenwidth() // 2, self.master.winfo_screenheight() // 2, image=self.image)
 
+    def morph_images(self, old_image, new_image, steps=20, delay=25):
+        for step in range(1, steps + 1):
+            alpha = step / steps
+            blended_image = Image.blend(old_image, new_image, alpha)
+            self.update_image(blended_image)
+            self.master.update()
+            time.sleep(delay / 1000)
+
     def close(self, event):
         self.master.destroy()
 
@@ -29,12 +37,13 @@ class FolderMonitor(FileSystemEventHandler):
         self.app = app
         self.folder_path = folder_path
 
-    def on_modified(self, event):
+    def on_created(self, event):
         if event.src_path.lower().endswith('.png'):
             image_path = Path(event.src_path)
             if image_path.is_file():
-                image = Image.open(image_path)
-                self.app.update_image(image)
+                new_image = Image.open(image_path)
+                old_image = self.app.image._PhotoImage__photo.image
+                self.app.morph_images(old_image, new_image)
 
 def main(folder_path):
     last_updated_png = sorted(folder_path.glob('*.png'), key=lambda p: p.stat().st_mtime, reverse=True)[0]
