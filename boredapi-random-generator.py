@@ -35,7 +35,7 @@ def submit_extra_single_image_request(api_url, image_data, upscaling_resize=4):
         "upscaler_1" : "ESRGAN_4x"
     }
     response = requests.post(api_url, json=payload)
-    return response        
+    return response
 
 # Open an image and return it in a base64 string
 def get_image_as_base64_string(image_path):
@@ -45,11 +45,11 @@ def get_image_as_base64_string(image_path):
         byte_arr = io.BytesIO()
         img.save(byte_arr, format='PNG')
         byte_arr = byte_arr.getvalue()
-        
+
         # Convert the byte stream to a base64 string
         base64_encoded_result_bytes = base64.b64encode(byte_arr)
         base64_encoded_result_str = base64_encoded_result_bytes.decode('ascii')
-        
+
         return base64_encoded_result_str
 
 def get_random_activity():
@@ -63,7 +63,7 @@ def get_random_activity():
     else:
         print(f"Error: Unable to fetch data from the Bored API. Status code: {response.status_code}")
         return None
-    
+
 # def get_random_wikipedia_page_title():
 #     url = "https://en.wikipedia.org/w/api.php?action=query&format=json&list=random&rnnamespace=0&rnlimit=1"
 #     response = requests.get(url)
@@ -84,11 +84,11 @@ while True:
     random_activity = get_random_activity()
     if random_activity is not None:
         print(f"Random activity: {random_activity}")
-        
+
 
         txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
         data = {
-            'prompt': "A friendly Viktor Orban " + random_activity + " by Edward Hopper", 
+            'prompt': "A friendly Viktor Orban " + random_activity + " by Edward Hopper",
             'steps': '40',
             'sampler_name': 'Euler',
             'alwayson_scripts': {
@@ -102,29 +102,8 @@ while True:
                 }
             }
             }
-        
+
         response = submit_post(txt2img_url, data)
-
-        # Text to image solution – controlnet didn't work like
-        # txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
-        # data = {
-        #     'prompt': "A friendly Viktor Orban " + random_activity + " by Edward Hopper", 
-        #     'steps': '40',
-        #     'sampler_name': 'Euler',
-        #     'alwayson_scripts': {
-        #         'controlnet': {
-        #             'args': [
-        #                 {
-        #                     'input_image': 'base64_controlnet_input_image',
-        #                     'model': 'control_v11p_sd15_openpose [cab727d4]'
-        #                 }
-        #             ]
-        #         }
-        #     }
-        #     }
-        
-        # response = submit_post(txt2img_url, data)
-
         filename = timestamp + "_" + random_activity.replace(" ", "_") + '.png'
         output_path = os.path.join(output_folder, filename)
         # save_encoded_image(response.json()['images'][0], prompt_msg.replace(" ", "_") + "_" + timestamp + '.png')
@@ -139,7 +118,7 @@ while True:
 
         # Handle the response from the extra-single-image request as needed
         # For example, you could save the returned image or print additional information
-        
+
         # r = response.json()['images'][0]
         # for i in r['images']:
         #     print ("Let's go further")
@@ -152,7 +131,7 @@ while True:
         #     print ("Sent payload")
         #     save_encoded_image(response2.json()['images'][0], output_path)
 
-        
+
         # upscaler_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
         # data = {response.json()['images'][0]}
 

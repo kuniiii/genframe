@@ -61,7 +61,7 @@ class PNGEventHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         on_new_image(event)
-        show_image(current_image, event.src_path)
+        show_image(current_image, " ")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

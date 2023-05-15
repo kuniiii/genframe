@@ -10,7 +10,7 @@ class FullScreenApp:
     def __init__(self, image, master=None):
         self.master = master
         self.master.attributes("-fullscreen", True)
-        self.master.bind("<Key>", self.close)
+        self.master.bind("<Escape>", self.close)
 
         self.canvas = Canvas(self.master, width=self.master.winfo_screenwidth(), height=self.master.winfo_screenheight(), bg="black")
         self.canvas.pack(fill="both", expand=True)
