@@ -22,7 +22,15 @@ def save_encoded_image(b64_image: str, output_path: str):
 
 
 if __name__ == '__main__':
-    txt2img_url = 'http://192.168.68.56:7861/sdapi/v1/txt2img'
+    txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
     data = {'prompt': 'a dog wearing a hat'}
     response = submit_post(txt2img_url, data)
+    print("txt2img going on")
+    print(response)
+    data_progress = {'skip_current_image': 'false'}
     save_encoded_image(response.json()['images'][0], 'dog.png')
+    print("progress going on")
+    progressapi_url = 'http://0.0.0.0:7861/sdapi/v1/progress'
+    progress_response = submit_post(progressapi_url, data_progress)
+    print(progress_response.json())
+    # save_encoded_image(progress_response.json()['current_image'][0], 'dog_progress.png')
