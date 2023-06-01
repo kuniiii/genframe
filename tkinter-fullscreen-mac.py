@@ -4,15 +4,19 @@ from pathlib import Path
 from tkinter import Tk, Label
 import tkinter.font as tkFont
 from PIL import Image, ImageTk
+from PIL import UnidentifiedImageError
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import time
 
 def get_latest_png(folder_path):
     png_files = list(folder_path.glob("*.png"))
-    latest_png = max(png_files, key=lambda p: p.stat().st_mtime)
-    return latest_png
-
+    if png_files:
+        latest_png = max(png_files, key=lambda p: p.stat().st_mtime)
+        return latest_png
+    else:  #No png files found
+        return None
+    
 def show_image(image, filename):
     global photo
     photo = ImageTk.PhotoImage(image)
@@ -55,9 +59,9 @@ def on_new_image(event):
         current_image = new_image
 
 class PNGEventHandler(FileSystemEventHandler):
-    def on_created(self, event):
-        on_new_image(event)
-        show_image(current_image, event.src_path)
+    # def on_created(self, event):
+    #     on_new_image(event)
+    #     show_image(current_image, event.src_path)
 
     def on_modified(self, event):
         on_new_image(event)
@@ -86,9 +90,14 @@ if __name__ == "__main__":
     filename_label.pack(expand=True, anchor="center")
 
     latest_png = get_latest_png(folder_path)
-    current_image = Image.open(latest_png)
-    current_image.thumbnail((root.winfo_screenwidth(), root.winfo_screenheight() * 0.9))  # Adjust for 90% of screen height
-    show_image(current_image, str(latest_png))
+    if latest_png: # If a png file was found
+        current_image = Image.open(latest_png)
+        current_image.thumbnail((root.winfo_screenwidth(), root.winfo_screenheight() * 0.9))  # Adjust for 90% of screen height
+        show_image(current_image, str(latest_png))
+    else: # No png file was found, so create an empty image
+        width, height = root.winfo_screenwidth(), int(root.winfo_screenheight() * 0.9)
+        current_image = Image.new('RGBA', (width, height), 'black')  # Create a new black image
+        show_image(current_image, "No images found")
 
     observer = Observer()
     event_handler = PNGEventHandler()
