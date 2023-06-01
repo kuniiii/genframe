@@ -6,7 +6,8 @@ import tkinter.font as tkFont
 from PIL import Image, ImageTk
 from PIL import UnidentifiedImageError
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import PatternMatchingEventHandler
+
 import time
 
 def get_latest_png(folder_path):
@@ -28,23 +29,23 @@ def show_image(image, filename):
 
 def on_new_image(event):
     global current_image
-    print(f"New image detected: {event.src_path}")
-    if event.src_path.lower().endswith(".png"):
+    print(f"New image detected: {event.dest_path}")
+    if event.dest_path.lower().endswith(".png"):
         # Wait until the file size is non-zero
-        while os.path.getsize(event.src_path) == 0:
+        while os.path.getsize(event.dest_path) == 0:
             time.sleep(1)  # wait for 0.1 seconds
 
         # Verify the image
-        with open(event.src_path, 'rb') as f:
+        with open(event.dest_path, 'rb') as f:
             img = Image.open(f)
             try:
                 img.verify()
             except (IOError, SyntaxError) as e:
-                print(f'Bad file, skipping: {event.src_path}, error: {e}')
+                print(f'Bad file, skipping: {event.dest_path}, error: {e}')
                 return
 
         # Open the image
-        new_image = Image.open(event.src_path)
+        new_image = Image.open(event.dest_path)
         # new_image.thumbnail((root.winfo_screenwidth(), root.winfo_screenheight()))
         new_image.thumbnail((root.winfo_screenwidth(), root.winfo_screenheight() * 0.9))  # Adjust for 90% of screen height
 
@@ -53,20 +54,19 @@ def on_new_image(event):
         for i in range(1, num_steps + 1):
             alpha = i / num_steps
             morphed_image = Image.blend(current_image, new_image, alpha)
-            show_image(morphed_image, event.src_path)
+            show_image(morphed_image, event.dest_path)
             root.update()
 
         current_image = new_image
 
-class PNGEventHandler(FileSystemEventHandler):
-    # def on_created(self, event):
-    #     on_new_image(event)
-    #     show_image(current_image, event.src_path)
+class PNGPatternMatchingEventHandler(PatternMatchingEventHandler):
+    patterns = ["*.png"]
 
-    def on_modified(self, event):
-        on_new_image(event)
-        show_image(current_image, " ")
-
+    def on_moved(self, event):
+        print(f"File moved: {event.src_path} -> {event.dest_path}")
+        if event.dest_path.lower().endswith(".png"):
+            on_new_image(event)
+            
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python script.py <folder_path>")
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         show_image(current_image, "No images found")
 
     observer = Observer()
-    event_handler = PNGEventHandler()
+    event_handler = PNGPatternMatchingEventHandler()
     observer.schedule(event_handler, str(folder_path), recursive=False)
     observer.start()
 

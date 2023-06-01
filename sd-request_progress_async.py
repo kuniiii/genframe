@@ -2,14 +2,28 @@ import json
 import base64
 import asyncio
 from aiohttp import ClientSession
+from PIL import Image
+import io
+import os
 
 def save_encoded_image(b64_image: str, output_path: str):
     """
     Save the given image to the given output path.
     """
-    with open(output_path, "wb") as image_file:
-        image_file.write(base64.b64decode(b64_image))
 
+    # Decode the base64 image
+    image_data = base64.b64decode(b64_image)
+    image = Image.open(io.BytesIO(image_data))
+
+    # Resize the image
+    resized_image = image.resize((512, 512))
+
+    # Save the image as a .tmp file first
+    temp_path = output_path + ".temp"
+    resized_image.save(temp_path, format='PNG')
+
+    # Rename the .tmp file to the desired output path
+    os.rename(temp_path, output_path)
 
 async def submit_post(session: ClientSession, url: str, data: dict):
     """
@@ -31,7 +45,7 @@ async def main():
     txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
     data = {
         'prompt': 'a dog wearing a hat',
-        'steps': 120
+        'steps': 50
         }
 
     async with ClientSession() as session:
