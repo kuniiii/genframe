@@ -44,8 +44,8 @@ async def submit_get(session: ClientSession, url: str):
 async def main():
     txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
     data = {
-        'prompt': 'a dog wearing a hat',
-        'steps': 50
+        'prompt': 'a cat wearing a hat',
+        'steps': 150
         }
 
     async with ClientSession() as session:

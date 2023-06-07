@@ -10,7 +10,7 @@ import zmq
 import io
 import os
 
-output_folder = "/home/peterkun/Desktop/Development/output-10may/"
+output_folder = "/home/peterkun/Desktop/output/"
 
 import datetime
 
@@ -21,7 +21,7 @@ now = datetime.datetime.now()
 timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 
 # controlnet init image
-image_path = "/home/peterkun/Desktop/Development/face_portrait_openpose.png"
+image_path = "face_portrait_openpose.png"
 
 from PIL import Image, PngImagePlugin
 
@@ -43,13 +43,16 @@ font = ImageFont.truetype(SourceSerifProSemibold, 24)
 
 # creating zeromq context and starting up the server
 context = zmq.Context()
-# socket = context.socket(zmq.REP)
-socket = context.socket(zmq.PULL)
+input_socket = context.socket(zmq.SUB)
 print('Binding to port 5555')
-socket.bind("tcp://*:5555")
+input_socket.bind("tcp://*:5555")
+input_socket.setsockopt(zmq.SUBSCRIBE, b"client1")
+
+output_socket = context.socket(zmq.PUB)
+output_socket.bind("tcp://*:5556")  # Bind to a different port
 
 poller = zmq.Poller()
-poller.register(socket, zmq.POLLIN)
+poller.register(input_socket, zmq.POLLIN)
 
 # functions for API requests
 
@@ -114,26 +117,20 @@ labels3 = ["woman", "girl", "witch", "queen", "maiden", "matron", "dancer", "bri
 base64_controlnet_input_image = get_image_as_base64_string(image_path)
 
 while True:
-    socks = dict(poller.poll())
-    if socket in socks:
-        message = socket.recv_multipart()
+    events = dict(poller.poll())
+    if input_socket in events: # and events[input_socket == zmq.POLLIN:
+        message = input_socket.recv_multipart()
         # parsing the received message into something usable.
         # there must be a better way of doing this
         analog_raw_values = message[1].decode().lstrip('[ ').rstrip('] ').replace(' ', '').split(',')
         analog_values = [x for x in analog_raw_values]
         print(analog_values)
-
-        # current_values = analog_values[1:4]
-
-
-        # print(analog_values[1].lstrip(' '))
-        # if int(analog_values[2]) == 1:
-        # if keyboard.is_pressed('g'):
         print("let's send a request now!")
         prompt_msg = labels1[int(analog_values[1])] + " portrait of a " + labels2[int(analog_values[2])] + " " + labels3[int(analog_values[3])]
         print(prompt_msg)
 
         inky_refresh(prompt_msg, 30, font)
+        print("finished updating inky")
         txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
         data = {
         'prompt': prompt_msg,
@@ -151,7 +148,11 @@ while True:
         }
         }
         response = submit_post(txt2img_url, data)
+        response_img_base64_encoded = response.json()['images'][0]
+        response_img_to_send = response_img_base64_encoded.encode()
         save_encoded_image(response.json()['images'][0], prompt_msg + '.png')
+        # print(response.json()['images'][0])
+        output_socket.send_multipart([b"client1", response_img_to_send])
         filename = timestamp + "_" + prompt_msg.replace(" ", "_") + '.png'
         output_path = os.path.join(output_folder, filename)
 
