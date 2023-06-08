@@ -10,8 +10,10 @@ class Application(tk.Frame):
         self.master = master
         self.pack()
 
-        self.label = tk.Label(self, text="Waiting for images...", width=512, height=512)
+        self.label = tk.Label(self, width=1024, height=1024)
         self.label.pack()
+
+        self.imgtk = None  # Store the current PhotoImage
 
         self.receive_images()
 
@@ -36,11 +38,13 @@ class Application(tk.Frame):
             # Create a PIL Image from the bytes
             image = Image.open(io.BytesIO(image_bytes))
 
-            # Create a Tkinter-compatible image
-            imgtk = ImageTk.PhotoImage(image=image)
+            # Resize the image to fit the window
+            resized_image = image.resize((1024, 1024))
 
-            self.label.config(image=imgtk)
-            self.label.image = imgtk
+            # Create a Tkinter-compatible image
+            self.imgtk = ImageTk.PhotoImage(image=resized_image)
+
+            self.label.config(image=self.imgtk)
 
             # Update the Tkinter window
             self.master.update()
