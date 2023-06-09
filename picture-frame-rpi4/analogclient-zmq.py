@@ -49,16 +49,16 @@ while True:
         initial_change = True  # Mark the initial change
         print("change detected")
 
-    if repetitions == 30:  # Send message after 3 seconds (30*0.1s) of no change
+    if repetitions == 15:  # Send message after 3 seconds (30*0.1s) of no change
         package = [one, selectorValueFloat1, selectorValueFloat2, selectorValueFloat3, button, "hello"]
         message = json.dumps(package)
         message = message.encode()
-        print("sending message, waiting 3 seconds!")
+        print("sending message, waiting 15 seconds!")
         socket.send_multipart([b"client1", message])
         repetitions = 0  # Reset repetitions
         last_value = None
         initial_change = False  # Reset the initial change flag
-        time.sleep(3)
+        time.sleep(15)
 
     time.sleep(0.1)
 

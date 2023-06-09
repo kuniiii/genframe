@@ -1,5 +1,5 @@
 import zmq
-import sd_request_progress
+from modules import sd_request_progress
 
 def main():
     txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'

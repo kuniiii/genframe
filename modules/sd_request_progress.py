@@ -34,7 +34,7 @@ async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, ou
             if 'current_image' in response and response['current_image']:
                 response_img_base64_encoded = response['current_image']
                 response_img_to_send = response_img_base64_encoded.encode()
-                output_socket.send_multipart([b"client1", response_img_to_send])
+                output_socket.send_multipart([b"client1", response_img_to_send, b"progress"])
                 print(f"Progress image {step_counter} sent")
                 step_counter += 1
 
@@ -45,7 +45,7 @@ async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, ou
         if 'images' in final_response and final_response['images']:
             response_img_base64_encoded = final_response['images'][0]
             response_img_to_send = response_img_base64_encoded.encode()
-            output_socket.send_multipart([b"client1", response_img_to_send])
+            output_socket.send_multipart([b"client1", response_img_to_send, b"final"])
             print("Final image sent")
 
 def run_process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, output_socket: zmq.Socket):

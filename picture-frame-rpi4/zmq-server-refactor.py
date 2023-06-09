@@ -1,3 +1,10 @@
+# loading modules
+import sys
+# caution: path[0] is reserved for script path (or '' in REPL)
+sys.path.insert(1, '/home/peterkun/Desktop/Development/modules/')
+
+import sd_request_progress
+
 # loading API request stuff
 import json
 import base64
@@ -25,21 +32,7 @@ image_path = "face_portrait_openpose.png"
 
 from PIL import Image, PngImagePlugin
 
-# loading inky stuff
-from inky.auto import auto
-from PIL import Image, ImageFont, ImageDraw
-import textwrap
-from font_source_serif_pro import SourceSerifProSemibold
-# from font_source_sans_pro import SourceSansProSemibold
-
-# keyboard input
-import keyboard
-
-# setup inky
-inky_display = auto(ask_user=True, verbose=True)
-inky_display.set_border(inky_display.WHITE)
-
-font = ImageFont.truetype(SourceSerifProSemibold, 24)
+import artnet_inky
 
 # creating zeromq context and starting up the server
 context = zmq.Context()
@@ -89,23 +82,6 @@ def get_image_as_base64_string(image_path):
 
         return base64_encoded_result_str
 
-def inky_refresh(text: str, max_width: int, font: ImageFont):
-    img = Image.new("P", (inky_display.width, inky_display.height))
-    draw = ImageDraw.Draw(img)
-
-    #wrap text
-    lines = textwrap.wrap(text, width=max_width)
-    message = '\n'.join(lines)
-
-    w, h = draw.textsize(message, font)
-    x = (inky_display.width / 2) - (w / 2)
-    y = (inky_display.height / 2) - (h / 2)
-    #draw.text((x, y), message, inky_display.BLACK, font)
-    draw.multiline_text((x, y), message, inky_display.BLACK, font)
-
-    inky_display.set_image(img)
-    inky_display.show()
-
 # here comes the labels
 # labels1 = ["frightening", "scary", "uninterested", "dog", "curious", "excited", "cat", "flowerpot", "banana", "ghost", "alien", "chicken", "posh lonely"]
 # labels2 = ["joyful", "sombre", "romantic", "dreamy", "serene", "mysterious", "contemplative", "nostalgic", "intense", "whimsical", "golden hour", "dramatic", "natural", "neon"]
@@ -129,11 +105,20 @@ while True:
         prompt_msg = labels1[int(analog_values[1])] + " portrait of a " + labels2[int(analog_values[2])] + " " + labels3[int(analog_values[3])]
         print(prompt_msg)
 
-        inky_refresh(prompt_msg, 30, font)
+        artnet_inky.inky_refresh(prompt_msg, 30)
+        progressapi_url = 'http://0.0.0.0:7861/sdapi/v1/progress'
         txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
         data = {
         'prompt': prompt_msg,
-        'steps': '25',
+        'steps': '7',
+        'enable_hr': 'true',
+        'denoising_strength': 0.7,
+        'firstphase_width': 512,
+        'firstphase_height': 512,
+        'hr_scale': 2,
+        'hr_upscaler': 'ESRGAN_4x',
+        #'hr_resize_x': 1024,
+        #'hr_resize_y': 1024,
         'sampler_name': 'Euler',
         'alwayson_scripts': {
             'controlnet': {
@@ -146,18 +131,19 @@ while True:
             }
         }
         }
-        response = submit_post(txt2img_url, data)
-        response_img_base64_encoded = response.json()['images'][0]
-        response_img_to_send = response_img_base64_encoded.encode()
-        save_encoded_image(response.json()['images'][0], prompt_msg + '.png')
+        sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
+        # response = submit_post(txt2img_url, data)
+        # response_img_base64_encoded = response.json()['images'][0]
+        # response_img_to_send = response_img_base64_encoded.encode()
+        # save_encoded_image(response.json()['images'][0], prompt_msg + '.png')
         # print(response.json()['images'][0])
-        output_socket.send_multipart([b"client1", response_img_to_send])
-        filename = timestamp + "_" + prompt_msg.replace(" ", "_") + '.png'
-        output_path = os.path.join(output_folder, filename)
+        # output_socket.send_multipart([b"client1", response_img_to_send])
+        # filename = timestamp + "_" + prompt_msg.replace(" ", "_") + '.png'
+        # output_path = os.path.join(output_folder, filename)
 
         # Submit the extra-single-image reques
-        extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
-        image_data = response.json()['images'][0]
-        extra_single_image_response = submit_extra_single_image_request(extra_single_image_url, image_data)
+        # extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
+        # image_data = response.json()['images'][0]
+        # extra_single_image_response = submit_extra_single_image_request(extra_single_image_url, image_data)
         # print(extra_single_image_response.json())
-        save_encoded_image(extra_single_image_response.json()['image'], output_path)
+        # save_encoded_image(extra_single_image_response.json()['image'], output_path)
