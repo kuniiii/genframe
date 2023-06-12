@@ -1,22 +1,49 @@
+import argparse
 import tkinter as tk
 from PIL import Image, ImageTk, ImageFilter
 import io
 import zmq
 import base64
+from queue import Queue
+from threading import Thread
+
+def is_base64(sb):
+    try:
+        if isinstance(sb, str):
+            # If there's any unicode here, an exception will be thrown and the function will return false
+            sb_bytes = bytes(sb, 'ascii')
+        elif isinstance(sb, bytes):
+            sb_bytes = sb
+        else:
+            raise ValueError("Argument must be string or bytes")
+        return base64.b64encode(base64.b64decode(sb_bytes)) == sb_bytes
+    except Exception:
+        return False
 
 class Application(tk.Frame):
-    def __init__(self, master=None):
-        super().__init__(master)
+    def __init__(self, master=None, fullscreen=False):
+        super().__init__(master, bg='black')
         self.master = master
-        self.pack()
+        self.pack(fill=tk.BOTH, expand=True)
 
-        self.label = tk.Label(self, width=1024, height=1024)
-        self.label.pack()
+        self.fullscreen = fullscreen
+        self.label = tk.Label(self, width=1024, height=1024, bg='black', relief='flat', bd=0)
+        self.label.pack(expand=True)
 
         self.imgtk = None  # Store the current PhotoImage
         self.prev_img = None  # Store the previous image
+        self.window_destroyed = False  # Flag to check if window is destroyed
 
-        self.receive_images()
+        if self.fullscreen:
+            self.master.attributes("-fullscreen", True)
+            self.master.configure(background='black')
+            self.master.bind("<Escape>", self.exit_fullscreen)
+
+        self.image_queue = Queue()
+        self.thread = Thread(target=self.receive_images)
+        self.thread.start()
+
+        self.process_images()
 
     def receive_images(self):
         print("Entering receive_images function...")
@@ -26,7 +53,7 @@ class Application(tk.Frame):
 
         socket.setsockopt(zmq.SUBSCRIBE, b"client1")
 
-        while True:
+        while not self.window_destroyed:
             image_data = socket.recv_multipart()
 
             # Extract the image data from the message
@@ -35,7 +62,12 @@ class Application(tk.Frame):
             print(f"Message received: {messages_type}")
 
             # Decode the base64 image string to bytes
-            image_bytes = base64.b64decode(image_base64)
+            if is_base64(image_base64):
+                image_bytes = base64.b64decode(image_base64)
+            else:
+                print("Received string is not a valid base64 string: ", image_base64)
+                continue  # Skip to the next loop iteration
+            # image_bytes = base64.b64decode(image_base64)
 
             # Create a PIL Image from the bytes
             image = Image.open(io.BytesIO(image_bytes))
@@ -46,21 +78,41 @@ class Application(tk.Frame):
             # If a previous image exists, blend the current and previous image
             if self.prev_img and messages_type == 'progress':
                 image = Image.blend(self.prev_img, image, alpha=0.5)
-                image = image.filter(ImageFilter.GaussianBlur(25))
-
+                image = image.filter(ImageFilter.GaussianBlur(15))
 
             self.prev_img = image  # Store the current image for the next iteration
 
-            # Create a Tkinter-compatible image
-            self.imgtk = ImageTk.PhotoImage(image=image)
+            self.image_queue.put(image)
 
-            self.label.config(image=self.imgtk)
+    def process_images(self):
+        if not self.window_destroyed:
+            try:
+                image = self.image_queue.get_nowait()
+            except:
+                image = None
+            if image is not None:
+                # Create a Tkinter-compatible image
+                self.imgtk = ImageTk.PhotoImage(image=image)
 
-            # Update the Tkinter window
-            self.master.update()
+                self.label.config(image=self.imgtk)
 
-root = tk.Tk()
-app = Application(master=root)
+                # Update the Tkinter window
+                self.master.update()
 
-# Start the Tkinter event loop
-app.mainloop()
+            self.after(100, self.process_images)
+
+    def exit_fullscreen(self, event=None):
+        self.window_destroyed = True
+        self.master.destroy()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Runs the Application in fullscreen if --fullscreen argument is passed.')
+    parser.add_argument('--fullscreen', action='store_true', help='Runs the application in fullscreen.')
+
+    args = parser.parse_args()
+
+    root = tk.Tk()
+    app = Application(master=root, fullscreen=args.fullscreen)
+
+    # Start the Tkinter event loop
+    app.mainloop()

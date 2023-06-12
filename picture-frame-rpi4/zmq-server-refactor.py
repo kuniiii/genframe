@@ -58,7 +58,7 @@ def save_encoded_image(b64_image: str, output_path: str):
     with open(output_path, "wb") as image_file:
         image_file.write(base64.b64decode(b64_image))
 
-def submit_extra_single_image_request(api_url, image_data, upscaling_resize=4):
+def submit_extra_single_image_request(api_url, image_data, upscaling_resize=2):
     payload = {
         "image": image_data,
         "upscaling_resize": upscaling_resize,
@@ -108,17 +108,21 @@ while True:
         artnet_inky.inky_refresh(prompt_msg, 30)
         progressapi_url = 'http://0.0.0.0:7861/sdapi/v1/progress'
         txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
+        extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
         data = {
         'prompt': prompt_msg,
-        'steps': '7',
+        'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
+        'steps': '15',
+        #'width': '384',
+        #'height': '512',
         'enable_hr': 'true',
-        'denoising_strength': 0.7,
-        'firstphase_width': 512,
-        'firstphase_height': 512,
-        'hr_scale': 2,
+        'denoising_strength': '0.7',
+        'firstphase_width': '512',
+        'firstphase_height': '512',
+        'hr_scale': '2',
         'hr_upscaler': 'ESRGAN_4x',
-        #'hr_resize_x': 1024,
-        #'hr_resize_y': 1024,
+        'hr_resize_x': '1024',
+        'hr_resize_y': '1024',
         'sampler_name': 'Euler',
         'alwayson_scripts': {
             'controlnet': {
@@ -131,7 +135,30 @@ while True:
             }
         }
         }
-        sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
+        # Run the first function and get the final image
+        final_image = sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
+        # sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
+
+        # Submit the extra-single-image reques
+        extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
+        # image_data = response.json()['images'][0]
+        image_data = final_image
+        # extra_single_image_response = submit_extra_single_image_request(extra_single_image_url, image_data).json()
+        # print(extra_single_image_response.keys())
+        # extra_single_image_to_send = extra_single_image_response['image'].encode()
+        # print(extra_single_image_to_send)
+        # output_socket.send_multipart([b"client1", extra_single_image_to_send, b"upscaled"])
+        # print(extra_single_image_response.json())
+        # save_encoded_image(extra_single_image_response.json()['image'], output_path)
+
+
+        # Submit the extra-single-image reques
+        # extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
+        # extra_single_image_response = sd_request_progress.submit_extra_single_image_request(extra_single_image_url, final_image, 2, output_socket)
+        # print("we did it!")
+
+        # save_encoded_image(extra_single_image_response.json()['image'], output_path)
+
         # response = submit_post(txt2img_url, data)
         # response_img_base64_encoded = response.json()['images'][0]
         # response_img_to_send = response_img_base64_encoded.encode()
@@ -140,10 +167,3 @@ while True:
         # output_socket.send_multipart([b"client1", response_img_to_send])
         # filename = timestamp + "_" + prompt_msg.replace(" ", "_") + '.png'
         # output_path = os.path.join(output_folder, filename)
-
-        # Submit the extra-single-image reques
-        # extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
-        # image_data = response.json()['images'][0]
-        # extra_single_image_response = submit_extra_single_image_request(extra_single_image_url, image_data)
-        # print(extra_single_image_response.json())
-        # save_encoded_image(extra_single_image_response.json()['image'], output_path)
