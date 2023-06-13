@@ -117,11 +117,11 @@ while True:
         #'height': '512',
         'enable_hr': 'true',
         'denoising_strength': '0.7',
-        'firstphase_width': '512',
+        'firstphase_width': '384',
         'firstphase_height': '512',
         'hr_scale': '2',
         'hr_upscaler': 'ESRGAN_4x',
-        'hr_resize_x': '1024',
+        'hr_resize_x': '768',
         'hr_resize_y': '1024',
         'sampler_name': 'Euler',
         'alwayson_scripts': {

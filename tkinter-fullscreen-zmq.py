@@ -73,7 +73,21 @@ class Application(tk.Frame):
             image = Image.open(io.BytesIO(image_bytes))
 
             # Resize the image to fill the window
-            image = image.resize((1024, 1024), Image.ANTIALIAS)
+            window_width = self.master.winfo_screenwidth() * 0.9  # Get 90% of the screen width
+            window_height = self.master.winfo_screenheight() * 0.9  # Get 90% of the screen height
+            image_ratio = image.width / image.height
+            window_ratio = window_width / window_height
+
+            if window_ratio >= image_ratio:
+                # If the window is wider than the image, scale to match height
+                height = window_height
+                width = window_height * image_ratio
+            else:
+                # If the window is narrower than the image, scale to match width
+                width = window_width
+                height = window_width / image_ratio
+
+            image = image.resize((int(width), int(height)), Image.ANTIALIAS)
 
             # If a previous image exists, blend the current and previous image
             if self.prev_img and messages_type == 'progress':
