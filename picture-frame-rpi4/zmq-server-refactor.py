@@ -112,7 +112,7 @@ while True:
         data = {
         'prompt': prompt_msg,
         'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
-        'steps': '15',
+        'steps': '10',
         #'width': '384',
         #'height': '512',
         'enable_hr': 'true',
