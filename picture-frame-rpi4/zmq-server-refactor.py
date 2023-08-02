@@ -124,6 +124,7 @@ while True:
         'hr_resize_x': '768',
         'hr_resize_y': '1024',
         'sampler_name': 'Euler',
+        'save_images': 'true',
         'alwayson_scripts': {
             'controlnet': {
                 'args': [

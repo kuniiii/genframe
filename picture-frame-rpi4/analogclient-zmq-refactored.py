@@ -2,6 +2,16 @@ import time
 import zmq
 import json
 import automationhat
+import signal
+import sys
+
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    socket.close()
+    context.term()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 time.sleep(0.1)  # short pause after ads1015 class creation recommended
 
@@ -10,18 +20,32 @@ context = zmq.Context()
 # Socket to talk to server
 print("Connecting to server...")
 socket = context.socket(zmq.PUB)
-socket.connect("tcp://localhost:5555")
+
+# Connect to server with retries
+while True:
+    try:
+        socket.connect("tcp://localhost:5555")
+        break
+    except Exception as e:
+        print("Failed to connect to server, retrying in 5 seconds...", str(e))
+        time.sleep(5)
 
 last_value = None
 repetitions = 0
 initial_change = False  # New flag for initial change
 
 while True:
-    one = automationhat.analog.one.read()
-    two = automationhat.analog.two.read()
-    three = automationhat.analog.three.read()
-    button = automationhat.input.one.read()
-    # buttonGenerate = automationhat.input.two.read()
+    try:
+        one = automationhat.analog.one.read()
+        two = automationhat.analog.two.read()
+        three = automationhat.analog.three.read()
+        button = automationhat.input.one.read()
+        # buttonGenerate = automationhat.input.two.read()
+    except Exception as e:
+        print("Failed to read from automationhat, retrying in 1 second")
+        time.sleep(1)
+        continue
+
     selectorValueFloat1 = round(one / (0.454545))
     selectorValueFloat2 = round(two / (0.454545))
     selectorValueFloat3 = round(three / (0.454545))
@@ -61,10 +85,16 @@ while True:
 
     if repetitions == 15:  # Send message after 3 seconds (30*0.1s) of no change
         package = [one, selectorValueFloat1, selectorValueFloat2, selectorValueFloat3, button, "hello"]
-        message = json.dumps(package)
-        message = message.encode()
-        print("sending message, waiting 15 seconds!")
-        socket.send_multipart([b"client1", message])
+        try:
+            message = json.dumps(package)
+            message = message.encode()
+            print("sending message, waiting 15 seconds!")
+            socket.send_multipart([b"client1", message])
+        except Exception as e:
+            print("Failed to send ZMQ message, retrying in 1 second")
+            time.sleep(1)
+            continue
+
         repetitions = 0  # Reset repetitions
         last_value = None
         initial_change = False  # Reset the initial change flag

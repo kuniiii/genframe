@@ -5,9 +5,8 @@ import io
 import zmq
 import base64
 from queue import Queue
-from threading import Thread, Lock
-import signal
-import sys
+from threading import Thread
+import time
 
 def is_base64(sb):
     try:
@@ -35,7 +34,6 @@ class Application(tk.Frame):
         self.imgtk = None  # Store the current PhotoImage
         self.prev_img = None  # Store the previous image
         self.window_destroyed = False  # Flag to check if window is destroyed
-        self.window_destroyed_lock = Lock()  # Lock for the window_destroyed flag
 
         if self.fullscreen:
             self.master.attributes("-fullscreen", True)
@@ -52,31 +50,33 @@ class Application(tk.Frame):
         print("Entering receive_images function...")
         context = zmq.Context()
         socket = context.socket(zmq.SUB)
-        socket.connect("tcp://localhost:5556")  # Connect to the new port
 
-        socket.setsockopt(zmq.SUBSCRIBE, b"client1")
-
-        while True:
-            with self.window_destroyed_lock:
-                if self.window_destroyed:
-                    break
-
-            image_data = socket.recv_multipart()
-
-            # Extract the image data from the message
-            image_base64 = image_data[1]
-            messages_type = image_data[2].decode('utf-8')
-            print(f"Message received: {messages_type}")
-
-            # Decode the base64 image string to bytes
-            if is_base64(image_base64):
-                image_bytes = base64.b64decode(image_base64)
-            else:
-                print("Received string is not a valid base64 string: ", image_base64)
-                continue  # Skip to the next loop iteration
-            # image_bytes = base64.b64decode(image_base64)
+        while not self.window_destroyed:
+            try:
+                socket.connect("tcp://localhost:5556")  # Connect to the new port
+                socket.setsockopt(zmq.SUBSCRIBE, b"client1")
+            except Exception as e:
+                print("Error occured in zmq_connection: {str(e)}")
+                time.sleep(5)
+                continue
 
             try:
+                image_data = socket.recv_multipart()
+
+                # Extract the image data from the message
+                image_base64 = image_data[1]
+                messages_type = image_data[2].decode('utf-8')
+                print(f"Message received: {messages_type}")
+
+                # Decode the base64 image string to bytes
+                if is_base64(image_base64):
+                    image_bytes = base64.b64decode(image_base64)
+                else:
+                    print("Received string is not a valid base64 string: ", image_base64)
+                    continue  # Skip to the next loop iteration
+
+                # image_bytes = base64.b64decode(image_base64)
+
                 # Create a PIL Image from the bytes
                 image = Image.open(io.BytesIO(image_bytes))
 
@@ -103,68 +103,37 @@ class Application(tk.Frame):
                     image = image.filter(ImageFilter.GaussianBlur(15))
 
                 self.prev_img = image  # Store the current image for the next iteration
-
                 self.image_queue.put(image)
-            except Exception as e:
-                print(f"Error occured while processing image")
-                continue
 
+            except Exception as e:
+                print("Error occured in image_processing: {str(e)}")
+                time.sleep(1)
 
     def process_images(self):
-        with self.window_destroyed_lock:
-            if not self.window_destroyed:
+        if not self.window_destroyed:
+            try:
+                image = self.image_queue.get_nowait()
+            except:
+                image = None
+            if image is not None:
                 try:
-                    image = self.image_queue.get_nowait()
-                except:
-                    image = None
-                if image is not None:
-                     # Mark the previous PhotoImage object for garbage collection
-                    self.imgtk = None
 
-                    # Create a Tkinter-compatible image
-                    self.imgtk = ImageTk.PhotoImage(image=image)
-
+                    self.imgtk = ImageTk.PhotoImage(image=image) # Create a Tkinter-compatible image
                     self.label.config(image=self.imgtk)
+                    self.master.update() # Update the Tkinter window
+                except Exception as e:
+                    print(f"An error occured in image_processing: {str(e)}")
 
-                    # Update the Tkinter window
-                    self.master.update()
-
-                self.after(100, self.process_images)
+            self.after(100, self.process_images)
 
     def exit_fullscreen(self, event=None):
-        with self.window_destroyed_lock:
-            self.window_destroyed = True
+        self.window_destroyed = True
+        self.context.destroy() # Terminate ZMQ context
         self.master.destroy()
 
-def signal_handler(sig, frame):
-    print('You pressed Ctrl+C!')
-    cleanup()
-    sys.exit(0)
-
-def cleanup():
-    try:
-        root.destroy()
-    except:
-        pass
-
-    try:
-        app.destroy()
-    except:
-        pass
-
-    try:
-        context.destroy()
-    except:
-        pass
-
-    print("Cleaned up, exiting")
-
-    # with app.window_destroyed_lock:
-        # app.window_destroyed = True
-    # logging.info("Signal received: %s", sig)
-    # socket.close()
-    # context.term()
-    # sys.exit(0)
+    def destroy(self):
+        # Add any cleanup code here
+        super().destroy()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Runs the Application in fullscreen if --fullscreen argument is passed.')
@@ -172,24 +141,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
     root = tk.Tk()
     app = Application(master=root, fullscreen=args.fullscreen)
 
     try:
         # Start the Tkinter event loop
         app.mainloop()
-
     except KeyboardInterrupt:
-        print("Keyboard interrupt")
-        cleanup()
-
-    except Exception as e:
-        print("An error occured: %s", e)
-
-    finally:
-        # Wait for the image receiving thread to finish
-        app.thread.join()
-
+        app.exit_fullscreen()

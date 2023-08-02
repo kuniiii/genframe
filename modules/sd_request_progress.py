@@ -6,11 +6,13 @@ import base64
 # import json
 
 async def submit_post(session: aiohttp.ClientSession, url: str, data: dict):
-    """
-    Submit a POST request to the given URL with the given data.
-    """
-    async with session.post(url, json=data) as response:
-        return await response.json()
+    try:
+        async with session.post(url, json=data) as response:
+            return await response.json()
+    except aiohttp.ClientError as e:
+        print(f"ClientError: An error occurred while trying to send a POST request to {url}: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred while trying to send a POST request: {e}")
 
 async def submit_get(session: aiohttp.ClientSession, url: str):
     """
