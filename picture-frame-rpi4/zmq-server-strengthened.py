@@ -153,7 +153,7 @@ def main():
 
                 print(prompt_msg)
                 print(seed)
-                artnet_inky.inky_refresh(prompt_msg, 30)
+                # artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
                 progressapi_url = 'http://0.0.0.0:7861/sdapi/v1/progress'
                 txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
                 extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
@@ -167,7 +167,7 @@ def main():
                     # seed = seed
                 cfg_msg = labels3[int(analog_values[3])]
                 print(cfg_msg)
-
+                artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
                 data = {
                 'prompt': prompt_msg,
                 'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
