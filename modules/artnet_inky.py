@@ -19,15 +19,12 @@ def inky_refresh(text: str, max_width: int, seed: int, cfg: str):
     print("cfg:", cfg)
     #wrap text
     lines = textwrap.wrap(text, width=max_width)
-    lines2 = textwrap.wrap(text, width=max_width)
     message = '\n'.join(lines)
-    message2 = '\n'.join(lines2)
 
     w, h = draw.textsize(message, font)
     x = (inky_display.width / 2) - (w / 2)
     y = (inky_display.height / 2) - (h / 2)
     #draw.text((x, y), message, inky_display.BLACK, font)
-    draw.multiline_text((x, y), message, inky_display.BLACK, font)
     draw.multiline_text((x, y), message, inky_display.BLACK, font)
 
     inky_display.set_image(img)

@@ -34,7 +34,7 @@ image_path = "face_portrait_openpose.png"
 
 from PIL import Image, PngImagePlugin
 
-import artnet_inky
+import artnet_inky_seedcfg
 
 def setup_zmq_context_and_sockets():
     # creating zeromq context and starting up the server
@@ -154,9 +154,9 @@ def main():
                 print(prompt_msg)
                 print(seed)
                 # artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
-                progressapi_url = 'http://0.0.0.0:7861/sdapi/v1/progress'
-                txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
-                extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
+                progressapi_url = 'http://0.0.0.0:7860/sdapi/v1/progress'
+                txt2img_url = 'http://0.0.0.0:7860/sdapi/v1/txt2img'
+                extra_single_image_url = 'http://0.0.0.0:7860/sdapi/v1/extra-single-image'
 
                 # switch's random state: '0', keep state: '1'
                 if analog_values[4] == '0':
@@ -167,18 +167,18 @@ def main():
                     # seed = seed
                 cfg_msg = labels3[int(analog_values[3])]
                 print(cfg_msg)
-                artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
+                artnet_inky_seedcfg.inky_refresh(prompt_msg, 30, seed, cfg_msg)
                 data = {
                 'prompt': prompt_msg,
                 'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
                 'steps': '10',
                 'cfg_scale': cfg_msg,
-                #'width': '384',
-                #'height': '512',
+                'width': '384',
+                'height': '512',
                 'enable_hr': 'true',
                 'denoising_strength': '0.7',
-                'firstphase_width': '384',
-                'firstphase_height': '512',
+#                 'firstphase_width': '288',
+#                 'firstphase_height': '512',
                 'hr_scale': '2',
                 'hr_upscaler': 'ESRGAN_4x',
                 'hr_resize_x': '768',
@@ -202,7 +202,7 @@ def main():
                 # sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
 
                 # Submit the extra-single-image reques
-                extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
+                extra_single_image_url = 'http://0.0.0.0:7860/sdapi/v1/extra-single-image'
 
                 image_data = final_image
         except zmq.ZMQError as e:

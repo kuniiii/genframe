@@ -28,7 +28,7 @@ class Application(tk.Frame):
         self.pack(fill=tk.BOTH, expand=True)
 
         self.fullscreen = fullscreen
-        self.label = tk.Label(self, width=1024, height=1024, bg='black', relief='flat', bd=0)
+        self.label = tk.Label(self, width=1080, height=1920, bg='black', relief='flat', bd=0)
         self.label.pack(expand=True)
 
         self.imgtk = None  # Store the current PhotoImage
@@ -79,10 +79,12 @@ class Application(tk.Frame):
 
                 # Create a PIL Image from the bytes
                 image = Image.open(io.BytesIO(image_bytes))
+                print("image.width:", image.width)
+                print("image.height:", image.height)
 
                 # Resize the image to fill the window
-                window_width = self.master.winfo_screenwidth() * 0.9  # Get 90% of the screen width
-                window_height = self.master.winfo_screenheight() * 0.9  # Get 90% of the screen height
+                window_width = self.master.winfo_screenwidth() * 0.70  # Get 90% of the screen width
+                window_height = self.master.winfo_screenheight() * 0.70  # Get 90% of the screen height
                 image_ratio = image.width / image.height
                 window_ratio = window_width / window_height
 
@@ -106,7 +108,7 @@ class Application(tk.Frame):
                 self.image_queue.put(image)
 
             except Exception as e:
-                print("Error occured in image_processing: {str(e)}")
+                print(f"Error occured in image_processing: {str(e)}")
                 time.sleep(1)
 
     def process_images(self):
