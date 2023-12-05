@@ -34,6 +34,7 @@ async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, ou
         while not txt2img_task.done():
             response = await submit_get(session, progressapi_url)
             print(f"Progress iteration: {step_counter}")
+            print(response)
 
             if 'current_image' in response and response['current_image']:
                 response_img_base64_encoded = response['current_image']
@@ -42,7 +43,7 @@ async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, ou
                 print(f"Progress image {step_counter} sent")
                 step_counter += 1
 
-            await asyncio.sleep(1)  # Avoid overloading the server, adjust sleep time as needed
+            await asyncio.sleep(0.1)  # Avoid overloading the server, adjust sleep time as needed
 
         # Send the final image through ZeroMQ
         final_response = await txt2img_task

@@ -102,7 +102,7 @@ class Application(tk.Frame):
                 # If a previous image exists, blend the current and previous image
                 if self.prev_img and messages_type == 'progress':
                     image = Image.blend(self.prev_img, image, alpha=0.5)
-                    image = image.filter(ImageFilter.GaussianBlur(15))
+                    # image = image.filter(ImageFilter.GaussianBlur(0.5))
 
                 self.prev_img = image  # Store the current image for the next iteration
                 self.image_queue.put(image)
