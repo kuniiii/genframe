@@ -154,9 +154,9 @@ def main():
                 print(prompt_msg)
                 print(seed)
                 # artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
-                progressapi_url = 'http://0.0.0.0:7860/sdapi/v1/progress'
-                txt2img_url = 'http://0.0.0.0:7860/sdapi/v1/txt2img'
-                extra_single_image_url = 'http://0.0.0.0:7860/sdapi/v1/extra-single-image'
+                progressapi_url = 'http://res52.itu.dk:8022/sdapi/v1/progress'
+                txt2img_url = 'http://res52.itu.dk:8022/sdapi/v1/txt2img'
+                extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
 
                 # switch's random state: '0', keep state: '1'
                 if analog_values[4] == '0':
@@ -171,7 +171,7 @@ def main():
                 data = {
                 'prompt': prompt_msg,
                 'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
-                'steps': '10',
+                'steps': '5',
                 'cfg_scale': cfg_msg,
                 'width': '384',
                 'height': '512',
@@ -202,7 +202,7 @@ def main():
                 # sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
 
                 # Submit the extra-single-image reques
-                extra_single_image_url = 'http://0.0.0.0:7860/sdapi/v1/extra-single-image'
+                extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
 
                 image_data = final_image
         except zmq.ZMQError as e:

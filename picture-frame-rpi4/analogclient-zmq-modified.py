@@ -71,7 +71,8 @@ while True:
         selectorValueFloat1 = round(one / (0.454545))
         selectorValueFloat2 = round(two / (0.454545))
         selectorValueFloat3 = round(three / (0.454545))
-        print(f"Selector Values - One: {selectorValueFloat1}, Two: {selectorValueFloat2}, Three: {selectorValueFloat3}")
+        # selectorValueFloat3 = 5
+        # print(f"Selector Values - One: {selectorValueFloat1}, Two: {selectorValueFloat2}, Three: {selectorValueFloat3}")
         current_values = [selectorValueFloat1, selectorValueFloat2, selectorValueFloat3]
         print(current_values)
 
