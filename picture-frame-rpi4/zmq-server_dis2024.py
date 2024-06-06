@@ -4,24 +4,13 @@ import sys
 sys.path.insert(1, '/home/peterkun/Desktop/Development/modules/')
 
 import sd_request_progress
-
-# loading API request stuff
-import json
 import base64
-import requests
-
-# loading zeromq stuff
-import time
 import zmq
-
 import io
-import os
+import random
+import datetime
 
 output_folder = "/home/peterkun/Desktop/output/"
-
-import random
-
-import datetime
 
 # Get the current timestamp
 now = datetime.datetime.now()
@@ -32,7 +21,7 @@ timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 # controlnet init image
 image_path = "face_portrait_openpose.png"
 
-from PIL import Image, PngImagePlugin
+from PIL import Image
 
 import artnet_inky_seedcfg
 
@@ -50,53 +39,6 @@ def setup_zmq_context_and_sockets():
     poller = zmq.Poller()
     poller.register(input_socket, zmq.POLLIN)
     return context, input_socket, output_socket, poller
-
-# functions for API requests
-
-# def submit_post(url: str, data: dict, retries = 3):
-#     for i in range(retries):
-#         try:
-#             # Submit a POST request to the given URL with the given data.
-#             return requests.post(url, data=json.dumps(data))
-#         except requests.exceptions.RequestException as e:
-#             print(f"RequestException: An error occurred while trying to send a POST request to {url}: {e}")
-#             if i < retries -1: # i is zero indexed
-#                 time.sleep(1) # wait for a second before retry
-#             else:
-#                 print(f"Failed to send POST request after {retries} attempts.")
-#         except Exception as e:
-#             print(f"An unexpected error occurred while trying to send a POST request: {e}")
-
-# def save_encoded_image(b64_image: str, output_path: str):
-#     try:
-#         # Save the given image to the given output path
-#         with open(output_path, "wb") as image_file:
-#             image_file.write(base64.b64decode(b64_image))
-#     except FileNotFoundError:
-#         print(f"FileNotFoundError: The output path {output_path} was not found.")
-#     except PermissionError:
-#         print(f"PermissionError: Permission denied when trying to write to the output file {output_path}.")
-#     except Exception as e:
-#         print(f"An unexpected error occurred while saving the encoded image: {e}")
-
-# def submit_extra_single_image_request(api_url, image_data, upscaling_resize=2, retries=3):
-#     for i in range(retries):
-#         try:
-#             payload = {
-#                 "image": image_data,
-#                 "upscaling_resize": upscaling_resize,
-#                 "upscaler_1" : "ESRGAN_4x"
-#             }
-#             response = requests.post(api_url, json=payload)
-#             return response
-#         except requests.exceptions.RequestException as e:
-#             print(f"RequestException: An error occurred while trying to send a POST request to {api_url}: {e}")
-#             if i < retries - 1:  # i is zero indexed
-#                 time.sleep(1)  # wait for a second before trying again
-#             else:
-#                 print(f"Failed to send POST request after {retries} attempts.")
-#         except Exception as e:
-#             print(f"An unexpected error occurred while trying to send a POST request: {e}")
 
 # Open an image and return it in a base64 string
 def get_image_as_base64_string(image_path):
@@ -119,7 +61,6 @@ def get_image_as_base64_string(image_path):
         print(f"PermissionError: Permission denied when trying to open the image file {image_path}.")
     except Exception as e:
         print(f"An unexpected error occurred while getting the image as a base64 string: {e}")
-
 
 # here comes the labels
 # labels1 = ["frightening", "scary", "uninterested", "dog", "curious", "excited", "cat", "flowerpot", "banana", "ghost", "alien", "chicken", "posh lonely"]
@@ -156,7 +97,7 @@ def main():
                 # artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
                 progressapi_url = 'http://res52.itu.dk:8022/sdapi/v1/progress'
                 txt2img_url = 'http://res52.itu.dk:8022/sdapi/v1/txt2img'
-                extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
+                # extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
 
                 # switch's random state: '0', keep state: '1'
                 if analog_values[4] == '0':
@@ -202,7 +143,7 @@ def main():
                 # sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
 
                 # Submit the extra-single-image reques
-                extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
+                # extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
 
                 image_data = final_image
         except zmq.ZMQError as e:
