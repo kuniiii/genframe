@@ -8,7 +8,7 @@ import random
 import datetime
 from PIL import Image
 import artnet_inky_seedcfg
-import sd_request_progress
+import sd_request_progress_new
 
 output_folder = "/home/peterkun/Desktop/output/"
 
@@ -135,8 +135,9 @@ def main():
                 data, seed = process_message(message, labels1, labels2, labels3, base64_controlnet_input_image, seed) 
                 
                 # Run the first function and get the final image
-                final_image = sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
+                final_image, progress = sd_request_progress_new.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
                 
+                print("Progress in main:", progress)
                 image_data = final_image
         except zmq.ZMQError as e:
             print(f"ZMQError: An error occurred while receiving a message from the socket: {e}")

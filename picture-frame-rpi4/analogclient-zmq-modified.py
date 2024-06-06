@@ -22,7 +22,7 @@ print("Connecting to server...")
 
 # Attempt to connect to the server
 try:
-    socket.connect("tcp://localhost:5555")
+    socket.connect("tcp://localhost:55555")
 except Exception as e:
     print("Failed to connect to server, exiting...", str(e))
     socket.close()
