@@ -9,6 +9,9 @@ import base64
 USERNAME = "sd-artnet"
 PASSWORD = "TWIG8aida4firm6onward"
 
+# Global dictionary to store progress
+progress_dict = {}
+
 async def submit_post(session: aiohttp.ClientSession, url: str, data: dict):
     # Encode credentials
     credentials = base64.b64encode(f"{USERNAME}:{PASSWORD}".encode()).decode()
@@ -30,6 +33,7 @@ async def submit_get(session: aiohttp.ClientSession, url: str):
         return await response.json()
 
 async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, output_socket: zmq.Socket):
+    global progress_dict
     async with aiohttp.ClientSession() as session:
         # Submit txt2img post request
         txt2img_task = asyncio.create_task(submit_post(session, txt2img_url, data))  # Await the task
@@ -41,8 +45,9 @@ async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, ou
         # Check progress while waiting for txt2img response
         while not txt2img_task.done():
             response = await submit_get(session, progressapi_url)
-            print(f"Progress iteration: {step_counter}")
-            print(response['progress'])
+            # print(f"Progress iteration: {step_counter}")
+            progress_dict['progress'] = response['progress']
+            # print(response['progress'])
 
             if 'current_image' in response and response['current_image']:
                 response_img_base64_encoded = response['current_image']
@@ -60,8 +65,8 @@ async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, ou
             response_img_to_send = response_img_base64_encoded.encode()
             output_socket.send_multipart([b"client1", response_img_to_send, b"final"])
             print("Final image sent")
-        return response_img_base64_encoded if 'images' in final_response else None
+        return response_img_base64_encoded, progress_dict if 'images' in final_response else None
 
 def run_process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, output_socket: zmq.Socket):
     final_image = asyncio.run(process_txt2img(txt2img_url, data, progressapi_url, output_socket))
-    return final_image  # Return the final image as base64 encoded
+    return final_image, progress_dict  # Return the final image as base64 encoded
