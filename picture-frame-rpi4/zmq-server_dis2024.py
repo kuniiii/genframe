@@ -1,14 +1,14 @@
-# loading modules
-import sys
-# caution: path[0] is reserved for script path (or '' in REPL)
+import sys # loading the /modules path
 sys.path.insert(1, '/home/peterkun/Desktop/Development/modules/')
 
-import sd_request_progress
 import base64
 import zmq
 import io
 import random
 import datetime
+from PIL import Image
+import artnet_inky_seedcfg
+import sd_request_progress
 
 output_folder = "/home/peterkun/Desktop/output/"
 
@@ -21,9 +21,10 @@ timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 # controlnet init image
 image_path = "face_portrait_openpose.png"
 
-from PIL import Image
-
-import artnet_inky_seedcfg
+# here comes the labels
+labels1 = ["futuristic digital concept art", "vibrant pop art", "abstract expressionist", "dreamlike surrealist", "geometric cubist", "light-filled impressionist", "everyday realist", "romanticist", "antique neoclassical", "playful ornate rococo", "dramatic baroque", "renaissance"]
+labels2 = ["ecstatic", "joyful", "happy", "optimistic", "contented", "calm", "indifferent", "bored", "anxious", "frustrated", "angry", "sad", "depressed"]
+labels3 = ["1", "3", "5", "6", "7", "8", "9", "11", "15", "20", "25", "30"]
 
 def setup_zmq_context_and_sockets():
     # creating zeromq context and starting up the server
@@ -62,89 +63,80 @@ def get_image_as_base64_string(image_path):
     except Exception as e:
         print(f"An unexpected error occurred while getting the image as a base64 string: {e}")
 
-# here comes the labels
-# labels1 = ["frightening", "scary", "uninterested", "dog", "curious", "excited", "cat", "flowerpot", "banana", "ghost", "alien", "chicken", "posh lonely"]
-# labels2 = ["joyful", "sombre", "romantic", "dreamy", "serene", "mysterious", "contemplative", "nostalgic", "intense", "whimsical", "golden hour", "dramatic", "natural", "neon"]
-# labels3 = ["boy", "dog", "cat", "girl", "pope", "business man", "tree", "forest", "wolf", "fields", "foxes", "family", "chair", "desk", "building"]
-# labels1 = ["vivid", "dramatic", "ethereal", "surreal", "cinematic", "minimalistic", "monochromatic", "abstract", "nostalgic", "majestic", "intimate", "inspiring", "radiant"]
-labels1 = ["futuristic digital concept art", "vibrant pop art", "abstract expressionist", "dreamlike surrealist", "geometric cubist", "light-filled impressionist", "everyday realist", "romanticist", "antique neoclassical", "playful ornate rococo", "dramatic baroque", "renaissance"]
-labels2 = ["ecstatic", "joyful", "happy", "optimistic", "contented", "calm", "indifferent", "bored", "anxious", "frustrated", "angry", "sad", "depressed"]
-labels3 = ["1", "3", "5", "6", "7", "8", "9", "11", "15", "20", "25", "30"]
-# labels3 = ["woman", "girl", "witch", "queen", "maiden", "matron", "dancer", "bride", "mother", "warrior", "goddess", "widow", "seductress"]
+def construct_prompt(labels1, labels2, analog_values):
+    return labels1[int(analog_values[1])] + " portrait of " + ("an " if labels2[int(analog_values[2])][0] in 'aeiou' else "a ") + labels2[int(analog_values[2])] + " girl"
 
-base64_controlnet_input_image = get_image_as_base64_string(image_path)
+def construct_data(prompt_msg, cfg_msg, base64_controlnet_input_image, seed):
+    return {
+        'prompt': prompt_msg,
+        'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
+        'steps': '5',
+        'cfg_scale': cfg_msg,
+        'width': '384',
+        'height': '512',
+        'enable_hr': 'true',
+        'denoising_strength': '0.7',
+        'hr_scale': '2',
+        'hr_upscaler': 'ESRGAN_4x',
+        'hr_resize_x': '768',
+        'hr_resize_y': '1024',
+        'sampler_name': 'Euler',
+        'save_images': 'true',
+        'seed': seed,
+        'alwayson_scripts': {
+            'controlnet': {
+                'args': [
+                    {
+                        'input_image': base64_controlnet_input_image,
+                        'model': 'control_v11p_sd15_openpose [cab727d4]'
+                    }
+                ]
+            }
+        }
+    }
+
+def process_message(message, labels1, labels2, labels3, base64_controlnet_input_image, seed):
+    # parsing the received message into something usable.
+    # there must be a better way of doing this
+    analog_raw_values = message[1].decode().lstrip('[ ').rstrip('] ').replace(' ', '').split(',')
+    analog_values = [x for x in analog_raw_values] # converting to integer
+    print(analog_values)
+    print("let's send a request now!")
+    prompt_msg = construct_prompt(labels1, labels2, analog_values)
+    print(prompt_msg)
+    print(seed)
+    
+    # switch's random state: '0', keep state: '1'
+    if analog_values[4] == '0':
+        seed = str(random.randint(10**11, 10**12-1))
+        print("Seed updated: ", seed)
+    elif analog_values[4] == '1':
+        print("Seed kept the same: ", seed)
+    
+    cfg_msg = labels3[int(analog_values[3])]
+    print(cfg_msg)
+    artnet_inky_seedcfg.inky_refresh(prompt_msg, 30, seed, cfg_msg)
+    
+    data = construct_data(prompt_msg, cfg_msg, base64_controlnet_input_image, seed)
+    return data, seed
 
 def main():
     context, input_socket, output_socket, poller = setup_zmq_context_and_sockets()
     seed = str(random.randint(10**11, 10**12-1))
+    base64_controlnet_input_image = get_image_as_base64_string(image_path)
+    progressapi_url = 'http://res52.itu.dk:8022/sdapi/v1/progress'
+    txt2img_url = 'http://res52.itu.dk:8022/sdapi/v1/txt2img'
 
     while True:
         try:
             events = dict(poller.poll())
-            if input_socket in events: # and events[input_socket == zmq.POLLIN:
+            if input_socket in events:
                 message = input_socket.recv_multipart()
-                # parsing the received message into something usable.
-                # there must be a better way of doing this
-                analog_raw_values = message[1].decode().lstrip('[ ').rstrip('] ').replace(' ', '').split(',')
-                analog_values = [x for x in analog_raw_values] # converting to integer
-                print(analog_values)
-                print("let's send a request now!")
-                # prompt_msg = labels1[int(analog_values[1])] + " portrait of a " + labels2[int(analog_values[2])] + " girl"
-                prompt_msg = labels1[int(analog_values[1])] + " portrait of " + ("an " if labels2[int(analog_values[2])][0] in 'aeiou' else "a ") + labels2[int(analog_values[2])] + " girl"
-
-                print(prompt_msg)
-                print(seed)
-                # artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
-                progressapi_url = 'http://res52.itu.dk:8022/sdapi/v1/progress'
-                txt2img_url = 'http://res52.itu.dk:8022/sdapi/v1/txt2img'
-                # extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
-
-                # switch's random state: '0', keep state: '1'
-                if analog_values[4] == '0':
-                    seed = str(random.randint(10**11, 10**12-1))
-                    print("Seed updated: ", seed)
-                elif analog_values[4] == '1':
-                    print("Seed kept the same: ", seed)
-                    # seed = seed
-                cfg_msg = labels3[int(analog_values[3])]
-                print(cfg_msg)
-                artnet_inky_seedcfg.inky_refresh(prompt_msg, 30, seed, cfg_msg)
-                data = {
-                'prompt': prompt_msg,
-                'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
-                'steps': '5',
-                'cfg_scale': cfg_msg,
-                'width': '384',
-                'height': '512',
-                'enable_hr': 'true',
-                'denoising_strength': '0.7',
-#                 'firstphase_width': '288',
-#                 'firstphase_height': '512',
-                'hr_scale': '2',
-                'hr_upscaler': 'ESRGAN_4x',
-                'hr_resize_x': '768',
-                'hr_resize_y': '1024',
-                'sampler_name': 'Euler',
-                'save_images': 'true',
-                'seed': seed,
-                'alwayson_scripts': {
-                    'controlnet': {
-                        'args': [
-                            {
-                                'input_image': base64_controlnet_input_image,
-                                'model': 'control_v11p_sd15_openpose [cab727d4]'
-                            }
-                        ]
-                    }
-                }
-                }
+                data, seed = process_message(message, labels1, labels2, labels3, base64_controlnet_input_image, seed) 
+                
                 # Run the first function and get the final image
                 final_image = sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
-                # sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
-
-                # Submit the extra-single-image reques
-                # extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
-
+                
                 image_data = final_image
         except zmq.ZMQError as e:
             print(f"ZMQError: An error occurred while receiving a message from the socket: {e}")
