@@ -36,19 +36,22 @@ client_id = str(uuid.uuid4())
 # controlnet init image
 image_path = "face_portrait_openpose.png"
 
+# Function to create and return a Tkinter window and label for image display
 def create_image_window():
     window = tk.Tk()
-    window.title("Received Image")
+    window.title("GenFrame Portraits")
+    # Check if the script was started with --fullscreen argument
     if '--fullscreen' in sys.argv:
-        window.attributes('-fullscreen', True)
-        window.configure(background='black')
+        window.attributes('-fullscreen', True)  # Set the window to fullscreen
+        window.configure(background='black')  # Set background to black
     else:
-        window.configure(background='black')
+        window.configure(background='black')  # Set background to black even if not fullscreen
 
+    # Initial dummy image to initialize the label
     img = PhotoImage(width=1, height=1)
-    label = Label(window, image=img, bg='black')
-    label.image = img
-    label.pack(expand=True)
+    label = Label(window, image=img, bg='black')  # Ensure label background is also black
+    label.image = img  # Keep a reference so it's not garbage collected
+    label.pack(expand=True)  # Center the content in the window
     return window, label
 
 def queue_prompt(prompt):
@@ -58,6 +61,13 @@ def queue_prompt(prompt):
     return json.loads(urllib.request.urlopen(req).read())
 
 def blend_images(image1, image2, window, label, steps=10, duration=0.0001):
+    # Create a smooth transition between two images.
+    # :param image1: The first PIL Image object.
+    # :param image2: The second PIL Image object.
+    # :param window: The Tkinter window object.
+    # :param label: The Tkinter label used for displaying the image.
+    # :param steps: Number of steps in the transition.
+    # :param duration: Total duration of the transition in seconds.
     for step in range(steps + 1):
         alpha = step / steps
         blended_image = Image.blend(image1, image2, alpha)
@@ -97,7 +107,7 @@ def get_images(ws, prompt, window, label):
         return
     execution_complete = False
     prompt_id = queue_prompt(prompt)['prompt_id']
-    target_width, target_height = 1392, 768
+    target_width, target_height = 1392, 768 #TODO REVISE
     previous_image = None
 
     while True:
@@ -105,19 +115,38 @@ def get_images(ws, prompt, window, label):
         if isinstance(out, str):
             message = json.loads(out)
             print(message)
+                # Check if execution is complete
             if message['type'] == 'executing' and message['data'].get('node') is None:
-                execution_complete = True
-                break
-        else:
-            try:
-                current_image = Image.open(io.BytesIO(out[8:]))
-                if previous_image is None:
-                    previous_image = current_image
-                else:
-                    blend_images(previous_image, current_image, window, label)
-                    previous_image = current_image
-            except Exception as e:
-                print(f"Error processing image: {e}")
+                    execution_complete = True # Set flag to true when execution is complete
+                    break # Exit the loop since execution is done
+            else:
+                try:
+                    # Process the image data
+                    current_image = Image.open(io.BytesIO(out[8:])) # Load image data from bytes
+                    # Resize the image to fit the window, maintaining the aspect ratio
+                    current_image = current_image.resize((target_width, target_height), Image.LANCZOS)
+
+                    if previous_image is not None:
+                        # Perform the crossfade transition between the previous and current images
+                        blend_images(previous_image, current_image, window, label, steps=10, duration=0.00001)
+                        # continue
+                    else:
+                        # Directly show the current image if there is no previous image
+                        photo = ImageTk.PhotoImage(current_image)
+                        label.config(image=photo)
+                        label.image = photo  # Keep a reference so it's not garbage collected
+                        window.update()
+
+                    previous_image = current_image  # Update the previous image
+                except Exception as e:
+                    print(f"Error processing image: {e}")
+
+workflow_path = os.path.join(os.path.dirname(__file__), 'workflow_api-sdxl-solarpunk.json')
+# workflow_path = os.path.join(os.path.dirname(__file__), 'workflow_api_ws_solarpunk_sdxlturbo.json')
+with open(workflow_path, 'r') as file:
+    prompt_text = file.read()
+
+prompt = json.loads(prompt_text)
 
 def setup_zmq_context_and_sockets():
     context = zmq.Context()
@@ -172,8 +201,8 @@ def process_message(message, labels1, labels2, labels3, base64_controlnet_input_
     print(analog_values)
     print("let's send a request now!")
     prompt_msg = construct_prompt(labels1, labels2, analog_values)
-    print(prompt_msg)
-    print(seed)
+    print("constructed prompt:", prompt_msg)
+    print("seed:", seed)
     
     if analog_values[4] == '0':
         seed = str(random.randint(10**11, 10**12-1))
@@ -182,7 +211,7 @@ def process_message(message, labels1, labels2, labels3, base64_controlnet_input_
         print("Seed kept the same: ", seed)
     
     cfg_msg = labels3[int(analog_values[3])]
-    print(cfg_msg)
+    print("cfg_msg:", cfg_msg)
     
     data = construct_data(prompt_msg, cfg_msg, base64_controlnet_input_image, seed)
     return data, seed
@@ -197,10 +226,10 @@ def zmq_thread(labels1, labels2, labels3, image_path):
             events = dict(poller.poll())
             if input_socket in events:
                 message = input_socket.recv_multipart()
-                data, seed = process_message(message, labels1, labels2, labels3, base64_controlnet_input_image, seed) 
-                
+                data, seed = process_message(message, labels1, labels2, labels3, base64_controlnet_input_image, seed)
+                prompt["6"]["inputs"]["text"] = labels1
                 # Run the first function and get the final image
-                # HERE COMES A FUNCTION THAT MAKES A CALL
+                # Example: get_images(ws, "sample prompt", window, label)
 
         except zmq.ZMQError as e:
             print(f"ZMQError: An error occurred while receiving a message from the socket: {e}")
@@ -208,9 +237,12 @@ def zmq_thread(labels1, labels2, labels3, image_path):
             print(f"An unexpected error occurred while polling or receiving a message from the socket: {e}")
 
 def main():
-    labels1 = ['asd', 'basd']  # Replace with actual labels
-    labels2 = ['asd', 'basd']  # Replace with actual labels
-    labels3 = ['asd', 'basd']  # Replace with actual labels
+    # Setup logging (uncomment if logging is desired)
+    # setup_logging()
+
+    labels1 = ["futuristic digital concept art", "vibrant pop art", "abstract expressionist", "dreamlike surrealist", "geometric cubist", "light-filled impressionist", "everyday realist", "romanticist", "antique neoclassical", "playful ornate rococo", "dramatic baroque", "renaissance"]
+    labels2 = ["ecstatic", "joyful", "happy", "optimistic", "contented", "calm", "indifferent", "bored", "anxious", "frustrated", "angry", "sad", "depressed"]
+    labels3 = ["1", "3", "5", "6", "7", "8", "9", "11", "15", "20", "25", "30"]
     # image_path = 'path_to_image'  # Replace with the actual image path
 
     # Start the ZeroMQ thread
