@@ -32,6 +32,14 @@ def setup_logging():
 
 server_address = "artnet.itu.dk:8100"
 client_id = str(uuid.uuid4())
+# print("client_id:", client_id)
+
+# Setup logging (uncomment if logging is desired)
+# setup_logging()
+
+# WebSocket setup and interaction (add your WebSocket logic here)
+ws = websocket.WebSocket()
+ws.connect("ws://{}/ws?clientId={}".format(server_address, client_id))
 
 # controlnet init image
 image_path = "face_portrait_openpose.png"
@@ -58,7 +66,7 @@ def queue_prompt(prompt):
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode('utf-8')
     req = urllib.request.Request("http://{}/prompt".format(server_address), data=data)
-    return json.loads(urllib.request.urlopen(req).read())
+    return json.loads(urllib.request.urlopen(req).read()), req
 
 def blend_images(image1, image2, window, label, steps=10, duration=0.0001):
     # Create a smooth transition between two images.
@@ -74,6 +82,7 @@ def blend_images(image1, image2, window, label, steps=10, duration=0.0001):
         photo = ImageTk.PhotoImage(blended_image)
         label.config(image=photo)
         label.image = photo
+        window.update_idletasks()
         window.update()
 
 execution_complete = True
@@ -99,47 +108,47 @@ def get_image_as_base64_string(image_path):
     except Exception as e:
         print(f"An unexpected error occurred while getting the image as a base64 string: {e}")
 
-
 def get_images(ws, prompt, window, label):
+    print("in get_images")
     global execution_complete
     if not execution_complete:
         print("Execution haven't finished. Ignoring key press.")
         return
     execution_complete = False
-    prompt_id = queue_prompt(prompt)['prompt_id']
+    prompt_response, req = queue_prompt(prompt)
+    prompt_id = prompt_response['prompt_id']
+    print("prompt_id:", prompt_id)
     target_width, target_height = 1392, 768 #TODO REVISE
     previous_image = None
 
     while True:
         out = ws.recv()
+        # print("out:", out)
         if isinstance(out, str):
             message = json.loads(out)
-            print(message)
-                # Check if execution is complete
+            print("the message is...", message)
             if message['type'] == 'executing' and message['data'].get('node') is None:
-                    execution_complete = True # Set flag to true when execution is complete
-                    break # Exit the loop since execution is done
+                execution_complete = True
+                break
             else:
-                try:
-                    # Process the image data
-                    current_image = Image.open(io.BytesIO(out[8:])) # Load image data from bytes
-                    # Resize the image to fit the window, maintaining the aspect ratio
-                    current_image = current_image.resize((target_width, target_height), Image.LANCZOS)
+                print("the full message", message)
+        elif isinstance(out, bytes):
+            try:
+                current_image = Image.open(io.BytesIO(out[8:]))  # Load image data from bytes
+                current_image = current_image.resize((target_width, target_height), Image.LANCZOS)
 
-                    if previous_image is not None:
-                        # Perform the crossfade transition between the previous and current images
-                        blend_images(previous_image, current_image, window, label, steps=10, duration=0.00001)
-                        # continue
-                    else:
-                        # Directly show the current image if there is no previous image
-                        photo = ImageTk.PhotoImage(current_image)
-                        label.config(image=photo)
-                        label.image = photo  # Keep a reference so it's not garbage collected
-                        window.update()
+                if previous_image is not None:
+                    blend_images(previous_image, current_image, window, label, steps=10, duration=0.00001)
+                else:
+                    photo = ImageTk.PhotoImage(current_image)
+                    label.config(image=photo)
+                    label.image = photo
+                    window.update_idletasks()
+                    window.update()
 
-                    previous_image = current_image  # Update the previous image
-                except Exception as e:
-                    print(f"Error processing image: {e}")
+                previous_image = current_image
+            except Exception as e:
+                print(f"Error processing image: {e}")
 
 workflow_path = os.path.join(os.path.dirname(__file__), 'workflow_api-sdxl-solarpunk.json')
 # workflow_path = os.path.join(os.path.dirname(__file__), 'workflow_api_ws_solarpunk_sdxlturbo.json')
@@ -194,7 +203,6 @@ def construct_data(prompt_msg, cfg_msg, base64_controlnet_input_image, seed):
         }
     }
 
-
 def process_message(message, labels1, labels2, labels3, base64_controlnet_input_image, seed):
     analog_raw_values = message[1].decode().lstrip('[ ').rstrip('] ').replace(' ', '').split(',')
     analog_values = [x for x in analog_raw_values]
@@ -216,46 +224,45 @@ def process_message(message, labels1, labels2, labels3, base64_controlnet_input_
     data = construct_data(prompt_msg, cfg_msg, base64_controlnet_input_image, seed)
     return data, seed
 
-def zmq_thread(labels1, labels2, labels3, image_path):
+# def zmq_thread(labels1, labels2, labels3, image_path):
+def zmq_thread():
+    print("entered zmq_thread")
     context, input_socket, output_socket, poller = setup_zmq_context_and_sockets()
     seed = str(random.randint(10**11, 10**12-1))
     base64_controlnet_input_image = get_image_as_base64_string(image_path)
 
     while True:
         try:
+            print("zmq_thread in while True trying")
             events = dict(poller.poll())
             if input_socket in events:
+                print("zmq_thread in while True trying if input_socket in events")
                 message = input_socket.recv_multipart()
+                print("message", message)
                 data, seed = process_message(message, labels1, labels2, labels3, base64_controlnet_input_image, seed)
-                prompt["6"]["inputs"]["text"] = labels1
+                prompt["6"]["inputs"]["text"] = "Viktor Orban robot"
+                prompt["3"]["inputs"]["seed"] = random.randint(10**9, 10**10)
+                prompt["3"]["inputs"]["steps"] = 10
+                print("replacing the prompt text:", prompt["6"]["inputs"]["text"])
                 # Run the first function and get the final image
-                # Example: get_images(ws, "sample prompt", window, label)
+                get_images(ws, prompt, window, label)
 
         except zmq.ZMQError as e:
             print(f"ZMQError: An error occurred while receiving a message from the socket: {e}")
         except Exception as e:
             print(f"An unexpected error occurred while polling or receiving a message from the socket: {e}")
 
-def main():
-    # Setup logging (uncomment if logging is desired)
-    # setup_logging()
+labels1 = ["futuristic digital concept art", "vibrant pop art", "abstract expressionist", "dreamlike surrealist", "geometric cubist", "light-filled impressionist", "everyday realist", "romanticist", "antique neoclassical", "playful ornate rococo", "dramatic baroque", "renaissance"]
+labels2 = ["ecstatic", "joyful", "happy", "optimistic", "contented", "calm", "indifferent", "bored", "anxious", "frustrated", "angry", "sad", "depressed"]
+labels3 = ["1", "3", "5", "6", "7", "8", "9", "11", "15", "20", "25", "30"]
 
-    labels1 = ["futuristic digital concept art", "vibrant pop art", "abstract expressionist", "dreamlike surrealist", "geometric cubist", "light-filled impressionist", "everyday realist", "romanticist", "antique neoclassical", "playful ornate rococo", "dramatic baroque", "renaissance"]
-    labels2 = ["ecstatic", "joyful", "happy", "optimistic", "contented", "calm", "indifferent", "bored", "anxious", "frustrated", "angry", "sad", "depressed"]
-    labels3 = ["1", "3", "5", "6", "7", "8", "9", "11", "15", "20", "25", "30"]
-    # image_path = 'path_to_image'  # Replace with the actual image path
+# Initialize Tkinter window and label for image display
+window, label = create_image_window()
 
-    # Start the ZeroMQ thread
-    zmq_thread_instance = threading.Thread(target=zmq_thread, args=(labels1, labels2, labels3, image_path))
-    zmq_thread_instance.start()
+thread = threading.Thread(target=zmq_thread)
+thread.daemon = True
+thread.start()
 
-    # Tkinter GUI setup
-    window, label = create_image_window()
-    
-    # WebSocket setup and interaction (add your WebSocket logic here)
-    
-    # Start the Tkinter main loop
-    window.mainloop()
+window.mainloop()
 
-if __name__ == "__main__":
-    main()
+ws.close()
