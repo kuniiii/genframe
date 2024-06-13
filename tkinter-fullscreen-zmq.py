@@ -29,7 +29,7 @@ class Application(tk.Frame):
         self.pack(fill=tk.BOTH, expand=True)
 
         self.fullscreen = fullscreen
-        self.label = tk.Label(self, width=1024, height=1024, bg='black', relief='flat', bd=0)
+        self.label = tk.Label(self, width=1080, height=1920, bg='black', relief='flat', bd=0)
         self.label.pack(expand=True)
 
         self.imgtk = None  # Store the current PhotoImage
@@ -47,6 +47,20 @@ class Application(tk.Frame):
         self.thread.start()
 
         self.process_images()
+
+    # def blend_images(self, img1, img2, steps=10):
+    #     for step in range(steps + 1):
+    #         alpha = step / steps
+    #         blended_image = Image.blend(img1, img2, alpha)
+    #         blurred_image = blended_image.filter(ImageFilter.GaussianBlur(15))
+    #         self.image_queue.put(blurred_image)
+
+    def blend_images(self, img1, img2, steps=10):
+        for step in range(steps + 1):
+            alpha = step / steps
+            blended_image = Image.blend(img1, img2, alpha)
+            self.image_queue.put(blended_image)
+        self.prev_img = img2
 
     def receive_images(self):
         print("Entering receive_images function...")
@@ -81,8 +95,9 @@ class Application(tk.Frame):
                 image = Image.open(io.BytesIO(image_bytes))
 
                 # Resize the image to fill the window
-                window_width = self.master.winfo_screenwidth() * 0.9  # Get 90% of the screen width
-                window_height = self.master.winfo_screenheight() * 0.9  # Get 90% of the screen height
+                window_width = self.master.winfo_screenwidth() * 0.75  # Get 90% of the screen width
+                window_height = self.master.winfo_screenheight() * 0.75  # Get 90% of the screen height
+                print("the image size width x height", image.width, image.height)
                 image_ratio = image.width / image.height
                 window_ratio = window_width / window_height
 
@@ -99,8 +114,8 @@ class Application(tk.Frame):
 
                 # If a previous image exists, blend the current and previous image
                 if self.prev_img and messages_type == 'progress':
-                    image = Image.blend(self.prev_img, image, alpha=0.5)
-                    image = image.filter(ImageFilter.GaussianBlur(15))
+                    self.blend_images(self.prev_img, image)
+                    # image = image.filter(ImageFilter.GaussianBlur(15))
 
                 self.prev_img = image  # Store the current image for the next iteration
 

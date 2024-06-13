@@ -1,3 +1,5 @@
 autogenerating-frame/secrets.py
 **/__pycache__/
 picture-frame-rpi4/Development.code-workspace
+picture-frame-rpi4/websocket_trace_again.log
+locallog.log

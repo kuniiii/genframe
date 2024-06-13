@@ -154,8 +154,10 @@ def main():
                 print(prompt_msg)
                 print(seed)
                 # artnet_inky.inky_refresh(prompt_msg, 30, seed, cfg_msg)
-                progressapi_url = 'http://res52.itu.dk:8022/sdapi/v1/progress'
-                txt2img_url = 'http://res52.itu.dk:8022/sdapi/v1/txt2img'
+                # progressapi_url = 'http://res52.itu.dk:8022/sdapi/v1/progress'
+                progressapi_url = 'http://artnet.itu.dk:8022/sdapi/v1/progress'
+                # txt2img_url = 'http://res52.itu.dk:8022/sdapi/v1/txt2img'
+                txt2img_url = 'http://artnet.itu.dk:8022/sdapi/v1/txt2img'
                 extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
 
                 # switch's random state: '0', keep state: '1'
@@ -168,21 +170,22 @@ def main():
                 cfg_msg = labels3[int(analog_values[3])]
                 print(cfg_msg)
                 artnet_inky_seedcfg.inky_refresh(prompt_msg, 30, seed, cfg_msg)
+                # CAN HERE BE JUST FIRST PARAMETER "PAINTING", and seed and cfg_msg as None or False #TODO?
                 data = {
                 'prompt': prompt_msg,
                 'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
-                'steps': '5',
+                'steps': '30',
                 'cfg_scale': cfg_msg,
                 'width': '384',
                 'height': '512',
                 'enable_hr': 'true',
                 'denoising_strength': '0.7',
-#                 'firstphase_width': '288',
-#                 'firstphase_height': '512',
+                # 'firstphase_width': '384',
+                # 'firstphase_height': '512',
                 'hr_scale': '2',
                 'hr_upscaler': 'ESRGAN_4x',
-                'hr_resize_x': '768',
-                'hr_resize_y': '1024',
+                # 'hr_resize_x': '768',
+                # 'hr_resize_y': '1024',
                 'sampler_name': 'Euler',
                 'save_images': 'true',
                 'seed': seed,
@@ -200,7 +203,7 @@ def main():
                 # Run the first function and get the final image
                 final_image = sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
                 # sd_request_progress.run_process_txt2img(txt2img_url, data, progressapi_url, output_socket)
-
+                # WHAT IS IN THIS FINAL IMAGE #TODO?
                 # Submit the extra-single-image reques
                 extra_single_image_url = 'http://res52.itu.dk:8022/sdapi/v1/extra-single-image'
 

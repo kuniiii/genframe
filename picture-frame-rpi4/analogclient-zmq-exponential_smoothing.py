@@ -29,9 +29,9 @@ except Exception as e:
     sys.exit(1)
 
 # Sampling rate and window size setup
-sampling_rate_ads1015 = 10  # samples per second
+sampling_rate_ads1015 = 3300  # samples per second
 sampling_interval_ms = (1 / sampling_rate_ads1015) * 1000  # converting to milliseconds
-alpha = 0.01  # Smoothing factor for exponential smoothing
+alpha = 0.4  # Smoothing factor for exponential smoothing
 
 # Initialize necessary variables for EMA
 one_ema = None
