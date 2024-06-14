@@ -169,12 +169,12 @@ def main():
                     # seed = seed
                 cfg_msg = labels3[int(analog_values[3])]
                 print(cfg_msg)
-                artnet_inky_seedcfg.inky_refresh(prompt_msg, 30, seed, cfg_msg)
+                # artnet_inky_seedcfg.inky_refresh(prompt_msg, 30, seed, cfg_msg)
                 # CAN HERE BE JUST FIRST PARAMETER "PAINTING", and seed and cfg_msg as None or False #TODO?
                 data = {
                 'prompt': prompt_msg,
                 'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
-                'steps': '30',
+                'steps': '20',
                 'cfg_scale': cfg_msg,
                 'width': '384',
                 'height': '512',

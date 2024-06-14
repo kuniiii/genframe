@@ -96,12 +96,12 @@ while True:
         # print("change detected")
 
     # Send message if there are 15 repetitions
-    if repetitions == 15:
+    if repetitions == 30:
         package = [one, selectorValueFloat1, selectorValueFloat2, selectorValueFloat3, button, "hello"]
         try:
             message = json.dumps(package)
             message = message.encode()
-            print("sending message, waiting 15 seconds!")
+            print("sending message, waiting 25 seconds!")
             socket.send_multipart([b"client1", message])
         except Exception as e:
             print("Failed to send ZMQ message, retrying in 1 second")
@@ -111,11 +111,13 @@ while True:
         repetitions = 0
         last_value = None
         initial_change = False
-        time.sleep(15)
+        time.sleep(25)
 
     # Sleep to maintain the desired sampling rate
     elapsed_time = time.time() - start_time
+    # print("elapsed time: ", elapsed_time)
     sleep_time = max(0, (sampling_interval_ms / 1000) - elapsed_time)
+    # print("sleep time: ", sleep_time)
     time.sleep(sleep_time)
 
 socket.close()

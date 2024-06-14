@@ -4,6 +4,8 @@ import asyncio
 import base64
 # import requests
 # import json
+import artnet_inky_seedcfg
+import time
 
 # Hard-coded credentials
 USERNAME = "sd-artnet"
@@ -30,11 +32,13 @@ async def submit_get(session: aiohttp.ClientSession, url: str):
         return await response.json()
 
 async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, output_socket: zmq.Socket):
+    start_time = time.time()
+
     async with aiohttp.ClientSession() as session:
         # Submit txt2img post request
         txt2img_task = asyncio.create_task(submit_post(session, txt2img_url, data))  # Await the task
         print("txt2img going on")
-
+        artnet_inky_seedcfg.inky_painting("painting...", 30)
         # Initialize the counter for the image steps
         step_counter = 1
 
@@ -56,10 +60,14 @@ async def process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, ou
         # Send the final image through ZeroMQ
         final_response = await txt2img_task
         if 'images' in final_response and final_response['images']:
+            artnet_inky_seedcfg.inky_refresh(data['prompt'], 30, data['seed'], data['cfg_scale'])
             response_img_base64_encoded = final_response['images'][0]
             response_img_to_send = response_img_base64_encoded.encode()
             output_socket.send_multipart([b"client1", response_img_to_send, b"final"])
             print("Final image sent")
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"Time taken by process_txt2img: {elapsed_time} seconds")  # Print the elapsed time
         return response_img_base64_encoded if 'images' in final_response else None
 
 def run_process_txt2img(txt2img_url: str, data: dict, progressapi_url: str, output_socket: zmq.Socket):

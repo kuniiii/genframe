@@ -46,6 +46,35 @@ def inky_refresh(text: str, max_width: int, seed: int, cfg: str):
     inky_display.set_image(img)
     inky_display.show()
 
+def inky_painting(text: str, max_width: int):
+    img = Image.new("P", (inky_display.width, inky_display.height))
+    draw = ImageDraw.Draw(img)
+
+#   Wrap text for title
+    title_lines = textwrap.wrap(text, width=max_width)
+    title_message = '\n'.join(title_lines)
+
+# Calculate position for title
+    title_w, title_h = draw.textsize(title_message, title_font)
+    title_x = (inky_display.width / 2) - (title_w / 2)
+    title_y = (inky_display.height / 2) - (title_h / 2) - 5
+
+# #   Calculate position for seed and cfg, placing them 10px under the title
+#     seed_h = 20
+#     seed_x = title_x  # align to the title's left side
+#     seed_y = title_y + title_h + 70 # 10 pixels below the title
+
+#     cfg_x = title_x  # align to the title's left side
+#     cfg_y = seed_y + seed_h # right below the seed
+
+#   Draw title, seed and cfg
+    draw.text((title_x, title_y), title_message, inky_display.BLACK, title_font)
+    # draw.text((seed_x, seed_y), seed_message, inky_display.BLACK, author_font)
+    # draw.text((cfg_x, cfg_y), cfg_message, inky_display.BLACK, author_font)
+
+    inky_display.set_image(img)
+    inky_display.show()
+
 # def inky_refresh(text: str, max_width: int, seed: int, cfg: str):
 #     img = Image.new("P", (inky_display.width, inky_display.height))
 #     draw = ImageDraw.Draw(img)
