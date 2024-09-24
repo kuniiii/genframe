@@ -6,10 +6,7 @@ import base64
 # import json
 import artnet_inky_seedcfg
 import time
-
-# Hard-coded credentials
-USERNAME = "sd-artnet"
-PASSWORD = "TWIG8aida4firm6onward"
+from secrets import USERNAME, PASSWORD
 
 async def submit_post(session: aiohttp.ClientSession, url: str, data: dict):
     # Encode credentials

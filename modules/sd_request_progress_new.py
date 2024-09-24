@@ -2,12 +2,10 @@ import zmq
 import aiohttp
 import asyncio
 import base64
+from secrets import USERNAME, PASSWORD
 # import requests
 # import json
 
-# Hard-coded credentials
-USERNAME = "sd-artnet"
-PASSWORD = "TWIG8aida4firm6onward"
 
 # Global dictionary to store progress
 progress_dict = {}

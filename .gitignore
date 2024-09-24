@@ -3,3 +3,5 @@ autogenerating-frame/secrets.py
 picture-frame-rpi4/Development.code-workspace
 picture-frame-rpi4/websocket_trace_again.log
 locallog.log
+modules/secrets.py
+.DS_Store
