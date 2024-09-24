@@ -44,10 +44,32 @@ async def submit_get(session: ClientSession, url: str):
 async def main():
     txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
     data = {
-        'prompt': 'a cat wearing a hat',
-        'steps': 150
+        'prompt': 'portrait of a cat with a hat, masterful oilpainting on canvas',
+        'negative_prompt': 'deformed, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs',
+        'steps': '10',
+        #'width': '384',
+        #'height': '512',
+        'enable_hr': 'true',
+        'denoising_strength': '0.7',
+        'firstphase_width': '384',
+        'firstphase_height': '512',
+        'hr_scale': '2',
+        'hr_upscaler': 'ESRGAN_4x',
+        'hr_resize_x': '768',
+        'hr_resize_y': '1024',
+        'sampler_name': 'Euler',
+        'save_images': 'true'
+        # 'alwayson_scripts': {
+        #     'controlnet': {
+        #         'args': [
+        #             {
+        #                 'input_image': base64_controlnet_input_image,
+        #                 'model': 'control_v11p_sd15_openpose [cab727d4]'
+        #             }
+        #         ]
+        #     }
+        # }
         }
-
     async with ClientSession() as session:
         # Submit txt2img post request
         txt2img_task = asyncio.create_task(submit_post(session, txt2img_url, data))

@@ -17,7 +17,7 @@ now = datetime.datetime.now()
 # Format the timestamp as a string, e.g., "2023-05-01_12-30-15"
 timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 
-image_path = "/Users/peku/Development/artnet-picture-frame-v1/face_portrait_openpose.png"
+image_path = "/Users/peku/Development/artnet/picture-frame-rpi4/face_portrait_openpose.png"
 
 def submit_post(url: str, data: dict):
     # Submit a POST request to the given URL with the given data.
@@ -86,7 +86,7 @@ while True:
         print(f"Random activity: {random_activity}")
 
 
-        txt2img_url = 'http://0.0.0.0:7861/sdapi/v1/txt2img'
+        txt2img_url = 'http://10.28.44.87:7860/sdapi/v1/txt2img'
         data = {
             'prompt': "A friendly Viktor Orban " + random_activity + " by Edward Hopper",
             'steps': '40',
@@ -110,7 +110,7 @@ while True:
         # save_encoded_image(response.json()['images'][0], output_path)
 
         # Submit the extra-single-image request
-        extra_single_image_url = 'http://0.0.0.0:7861/sdapi/v1/extra-single-image'
+        extra_single_image_url = 'http://10.28.44.87:7860/sdapi/v1/extra-single-image'
         image_data = response.json()['images'][0]
         extra_single_image_response = submit_extra_single_image_request(extra_single_image_url, image_data)
         # print(extra_single_image_response.json())
